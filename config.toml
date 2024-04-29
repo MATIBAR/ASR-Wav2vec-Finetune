@@ -1,89 +1,75 @@
 [meta]
-name = "ASR" 
-pretrained_path = "facebook/wav2vec2-base"
+name = "ASR"
+pretrained_path = "facebook/wav2vec2-base" # <-- Adjust if using a different model ("jonatasgrosman/wav2vec2-large-xlsr-53-italian")
 seed = 42
-epochs = 20
-save_dir = "saved/" 
+epochs = 20 # <-- Consider adjusting based on training performance
+save_dir = "saved/"
 gradient_accumulation_steps = 2
-use_amp = false # Whether to use Automatic Mixed Precision for speeding up - https://pytorch.org/docs/stable/amp.html
-device_ids = "0" # set the gpu devices on which you want to train your model
-sr = 16000
-max_clip_grad_norm = 5.0 # torch.nn.utils.clip_grad_norm_
+use_amp = false # <-- Enable if your hardware supports AMP and you want faster training
+device_ids = "0" # <-- Adjust based on available GPUs (e.g., "0,1" for two GPUs)
+sr = 16000 # <-- Ensure this matches your audio files' sample rate
+max_clip_grad_norm = 5.0
 
 [special_tokens]
 bos_token = "<bos>"
 eos_token = "<eos>"
 unk_token = "<unk>"
 pad_token = "<pad>"
+#AGGIUNGERE QUA I TAG USATI PER LE NOSTRE ANNOTAZIONI, COME TOKEN SPECIALI (<PROLUNGAMENTO>, <PAUSA> ... anche Cityname, Addressname, Name ?)
 
-
-# Not available yet
 [huggingface]
-# You need to install git-lfs to be able to push
-# Check out https://huggingface.co/docs/hub/how-to-upstream#repository to understand the parameters
-push_to_hub = false
-push_every_validation_step = false # If false, repo will be push at the end of training [recommended false]
+push_to_hub = false # Ensure this is set to false to disable automatic pushing
+push_every_validation_step = false
 overwrite_output_dir = false
-blocking = false # whether to wait until the model is uploaded (this will be very slow because of large file) [recommended false, true only if push_every_validation_step is false]
+blocking = false
 
-    # you can pass your auth_token from your huggingface account to use_auth_token.
-    # Otherwise you need to run ```huggingface-cli login``` command to log in
     [huggingface.args]
-    local_dir = "huggingface-hub" # where your repo places in local
-    use_auth_token = true # you must provide the auth_token of your huggingface account. 
-    clone_from = "" # path to your repo in huggingface
-
-
+    local_dir = "huggingface-hub" # Local directory for saving models, won't be pushed to the cloud
+    use_auth_token = false # No need for an auth token if not pushing to the hub
+    clone_from = "" # No cloning from a repo since push is disabled
 
 [train_dataset]
 path = "base.base_dataset.BaseDataset"
     [train_dataset.args]
-    path = "/pass/your/train_dataset/path/here"
+    path = "/path/to/your/train_dataset" # <-- Replace with your training data path
     preload_data = false
     delimiter = "|"
-    # Only train audio files that have duration in range [min_duration, max_duration]
-    # min_duration = 0.5 # if not pass, default is -np.inf
-    # max_duration = 20 # if not pass, default is np.inf
     nb_workers = 16
-    
+
     [train_dataset.dataloader]
     batch_size = 8
     num_workers = 16
-    pin_memory = true 
+    pin_memory = true
     drop_last = true
 
     [train_dataset.sampler]
-    shuffle = true 
+    shuffle = true
     drop_last = true
 
-    
 [val_dataset]
 path = "base.base_dataset.BaseDataset"
     [val_dataset.args]
-    path = "/pass/your/val_dataset/path/here"
+    path = "/path/to/your/val_dataset" # <-- Replace with your validation data path
     preload_data = false
     delimiter = "|"
     nb_workers = 16
 
     [val_dataset.dataloader]
-    batch_size =  1 # Set validation batch_size > 1 may yield an incorrect score due to padding (but faster :D) - https://github.com/pytorch/fairseq/issues/3227 
+    batch_size = 1
     num_workers = 4
 
     [val_dataset.sampler]
-    shuffle = false 
+    shuffle = false
     drop_last = false
 
- 
 [optimizer]
-lr = 1e-6
+lr = 1e-6 # <-- Consider adjusting based on training performance
 
-
-[scheduler] 
-max_lr = 5e-4
-    
+[scheduler]
+max_lr = 5e-4 # <-- Consider adjusting based on training performance
 
 [trainer]
 path = "trainer.trainer.Trainer"
     [trainer.args]
-    validation_interval = 500
-    save_max_metric_score = false 
+    validation_interval = 500 # <-- Adjust based on how often you want to validate
+    save_max_metric_score = false # <-- Set to true to save only the best models
