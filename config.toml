@@ -29,7 +29,7 @@ overwrite_output_dir = false
 blocking = false
 
     [huggingface.args]
-    local_dir = "huggingface-hub" # Local directory for saving models, won't be pushed to the cloud
+    local_dir = "my_ASR_model" # Local directory for saving models, won't be pushed to the cloud
     use_auth_token = false # No need for an auth token if not pushing to the hub
     clone_from = "" # No cloning from a repo since push is disabled
 
