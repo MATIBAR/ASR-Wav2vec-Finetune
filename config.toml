@@ -7,7 +7,7 @@ save_dir = "saved/"
 gradient_accumulation_steps = 2
 use_amp = false # <-- Enable if your hardware supports AMP and you want faster training
 device_ids = "0" # <-- Adjust based on available GPUs (e.g., "0,1" for two GPUs)
-sr = 16000 # <-- Ensure this matches your audio files' sample rate
+sr = 44100 # <-- Ensure this matches your audio files' sample rate
 max_clip_grad_norm = 5.0
 
 [special_tokens]
@@ -15,6 +15,11 @@ bos_token = "<bos>"
 eos_token = "<eos>"
 unk_token = "<unk>"
 pad_token = "<pad>"
+prolungamento_token = "<PROLUNGAMENTO>"
+pausa_token = "<PAUSA>"
+city_name_token = "Cityname"
+address_name_token = "Addressname"
+name_token = "Name"
 #AGGIUNGERE QUA I TAG USATI PER LE NOSTRE ANNOTAZIONI, COME TOKEN SPECIALI (<PROLUNGAMENTO>, <PAUSA> ... anche Cityname, Addressname, Name ?)
 
 [huggingface]
