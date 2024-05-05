@@ -1,6 +1,6 @@
 [meta]
 name = "ASR"
-pretrained_path = "facebook/wav2vec2-base" # <-- Adjust if using a different model ("jonatasgrosman/wav2vec2-large-xlsr-53-italian")
+pretrained_path = "jonatasgrosman/wav2vec2-large-xlsr-53-italian" # <-- Adjust if using a different model ("jonatasgrosman/wav2vec2-large-xlsr-53-italian")
 seed = 42
 epochs = 20 # <-- Consider adjusting based on training performance
 save_dir = "saved/"
