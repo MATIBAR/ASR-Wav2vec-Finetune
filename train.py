@@ -1,3 +1,12 @@
+import subprocess
+import sys
+
+# Check if jiwer is installed, and install it if not
+try:
+    import jiwer
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "jiwer"])
+
 import argparse
 import json
 import torch
@@ -27,9 +36,12 @@ def setup(rank, world_size):
 def cleanup():
     dist.destroy_process_group()
 
+def resize_lm_head(model, vocab_size):
+    model.lm_head = torch.nn.Linear(model.config.hidden_size, vocab_size, bias=True)
+    model.config.vocab_size = vocab_size
 
 def main(rank, world_size, config, resume, preload):
-    os.environ['CUDA_VISIBLE_DEVICES']=config["meta"]["device_ids"]
+    os.environ['CUDA_VISIBLE_DEVICES'] = config["meta"]["device_ids"]
     os.environ['TORCH_DISTRIBUTED_DEBUG'] = 'INFO'
     setup(rank, world_size)
 
@@ -38,11 +50,11 @@ def main(rank, world_size, config, resume, preload):
     gradient_accumulation_steps = config["meta"]["gradient_accumulation_steps"]
     use_amp = config["meta"]["use_amp"]
     max_clip_grad_norm = config["meta"]["max_clip_grad_norm"]
-    save_dir =  os.path.join(config["meta"]["save_dir"], config["meta"]['name'] + '/checkpoints')
+    save_dir = os.path.join(config["meta"]["save_dir"], config["meta"]['name'] + '/checkpoints')
     log_dir = os.path.join(config["meta"]["save_dir"], config["meta"]['name'] + '/log_dir')
     
     if rank == 0:
-        # Creatr dirs
+        # Create dirs
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         if not os.path.exists(log_dir):
@@ -114,34 +126,37 @@ def main(rank, world_size, config, resume, preload):
         collate_fn=default_collate
     )
 
-
     # Load pretrained model
     model = Wav2Vec2ForCTC.from_pretrained(
         pretrained_path, 
         ctc_loss_reduction="mean", 
-        pad_token_id=processor.tokenizer.pad_token_id,
-        vocab_size=len(processor.tokenizer),
-        gradient_checkpointing=False
+        pad_token_id=processor.tokenizer.pad_token_id
     )
     
-    # freeze the wav2vec feature encoder, if you have small dataset, this helps a lot
+    # Check if vocab size matches
+    vocab_size = len(processor.tokenizer)
+    if model.config.vocab_size != vocab_size:
+        print(f"Resizing lm_head from {model.config.vocab_size} to {vocab_size}")
+        resize_lm_head(model, vocab_size)
+
+    # Freeze the wav2vec feature encoder, if you have a small dataset, this helps a lot
     model.freeze_feature_encoder()
     # DDP for multi-processing
     model = DDP(model.to(rank), device_ids=[rank], find_unused_parameters=True)
 
-    # Set up metric, scheduler, optmizer
+    # Set up metric, scheduler, optimizer
     compute_metric = Metric(processor)
     optimizer = torch.optim.AdamW(
-        params = model.parameters(),
-        lr = config["optimizer"]["lr"]
+        params=model.parameters(),
+        lr=config["optimizer"]["lr"]
     )
-    steps_per_epoch = (len(train_dl)//gradient_accumulation_steps) + (len(train_dl)%gradient_accumulation_steps != 0)
+    steps_per_epoch = (len(train_dl) // gradient_accumulation_steps) + (len(train_dl) % gradient_accumulation_steps != 0)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, 
         max_lr=config["scheduler"]["max_lr"], 
         epochs=epochs, 
-        steps_per_epoch = steps_per_epoch)
-
+        steps_per_epoch=steps_per_epoch
+    )
 
     if rank == 0:
         print("Number of training utterances: ", len(train_ds))
@@ -149,31 +164,30 @@ def main(rank, world_size, config, resume, preload):
 
     trainer_class = initialize_module(config["trainer"]["path"], initialize=False)
     trainer = trainer_class(
-        dist = dist,
-        rank = rank,
-        n_gpus = world_size,
-        config = config,
-        resume = resume,
-        preload = preload,
-        epochs = epochs,
-        steps_per_epoch = steps_per_epoch,
-        model = model,
-        compute_metric = compute_metric,
-        processor = processor,
-        train_dl = train_dl,
-        val_dl = val_dl,
-        train_sampler = train_sampler,
-        val_sampler = val_sampler,
-        optimizer = optimizer,
-        scheduler = scheduler,
-        save_dir = save_dir,
-        log_dir = log_dir,
-        gradient_accumulation_steps = gradient_accumulation_steps,
-        use_amp = use_amp,
-        max_clip_grad_norm = max_clip_grad_norm
+        dist=dist,
+        rank=rank,
+        n_gpus=world_size,
+        config=config,
+        resume=resume,
+        preload=preload,
+        epochs=epochs,
+        steps_per_epoch=steps_per_epoch,
+        model=model,
+        compute_metric=compute_metric,
+        processor=processor,
+        train_dl=train_dl,
+        val_dl=val_dl,
+        train_sampler=train_sampler,
+        val_sampler=val_sampler,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        save_dir=save_dir,
+        log_dir=log_dir,
+        gradient_accumulation_steps=gradient_accumulation_steps,
+        use_amp=use_amp,
+        max_clip_grad_norm=max_clip_grad_norm
     )
     trainer.train()
-
 
     cleanup()
 
@@ -190,10 +204,11 @@ if __name__ == '__main__':
     config = toml.load(args.config)
     n_gpus = len(config['meta']["device_ids"].split(','))
     
+    print('Here I am, running scripts')
+
     mp.spawn(
         main,
-        args = (n_gpus, config, args.resume, args.preload),
-        nprocs = n_gpus,
-        join = True
+        args=(n_gpus, config, args.resume, args.preload),
+        nprocs=n_gpus,
+        join=True
     )
-

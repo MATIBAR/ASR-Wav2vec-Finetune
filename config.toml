@@ -1,12 +1,13 @@
 [meta]
 name = "ASR" 
 pretrained_path = "jonatasgrosman/wav2vec2-large-xlsr-53-italian"
+# pretrained_path = "facebook/wav2vec2-base"
 seed = 42
 epochs = 20
 save_dir = "saved/" 
-gradient_accumulation_steps = 2
+gradient_accumulation_steps = 2	# Era 2
 use_amp = false # Whether to use Automatic Mixed Precision for speeding up - https://pytorch.org/docs/stable/amp.html
-device_ids = "0" # set the gpu devices on which you want to train your model
+device_ids = None # "0" # set the gpu devices on which you want to train your model
 sr = 44100
 max_clip_grad_norm = 5.0 # torch.nn.utils.clip_grad_norm_
 
@@ -44,18 +45,18 @@ blocking = false # whether to wait until the model is uploaded (this will be ver
 [train_dataset]
 path = "base.base_dataset.BaseDataset"
     [train_dataset.args]
-    path = "\home\cristiano.chesi\pr_ppa\audio_transcriptions.csv"
-    #path =  "C:\Users\Dell\Desktop\clean_files\audio_transcriptions.csv"
+    path = "/home/cristiano.chesi/pr_ppa/cleaned_audio_transcriptions_train.csv"
+    #path =  "C:/Users/Dell/Desktop/clean_files/cleaned_audio_transcriptions.csv"
     preload_data = false
     delimiter = "|"
     # Only train audio files that have duration in range [min_duration, max_duration]
     # min_duration = 0.5 # if not pass, default is -np.inf
     # max_duration = 20 # if not pass, default is np.inf
-    nb_workers = 16
+    nb_workers = 16 	#Era 16
     
     [train_dataset.dataloader]
-    batch_size = 8
-    num_workers = 16
+    batch_size = 1	# Era 8
+    num_workers = 16	# Era 16
     pin_memory = true 
     drop_last = true
 
@@ -67,15 +68,15 @@ path = "base.base_dataset.BaseDataset"
 [val_dataset]
 path = "base.base_dataset.BaseDataset"
     [val_dataset.args]
-    path = "\home\cristiano.chesi\pr_ppa\audio_transcriptions.csv"
-    #path =  "C:\Users\Dell\Desktop\clean_files\audio_transcriptions.csv"
+    path = "/home/cristiano.chesi/pr_ppa/cleaned_audio_transcriptions_valid.csv"
+    #path =  "C:/Users/Dell/Desktop/clean_files/cleaned_audio_transcriptions.csv"
     preload_data = false
     delimiter = "|"
-    nb_workers = 16
+    nb_workers = 16	# Era 16
 
     [val_dataset.dataloader]
-    batch_size =  1 # Set validation batch_size > 1 may yield an incorrect score due to padding (but faster :D) - https://github.com/pytorch/fairseq/issues/3227 
-    num_workers = 4
+    batch_size =  1 	# Set validation batch_size > 1 may yield an incorrect score due to padding (but faster :D) - https://github.com/pytorch/fairseq/issues/3227 
+    num_workers = 4	# Era 4
 
     [val_dataset.sampler]
     shuffle = false 
